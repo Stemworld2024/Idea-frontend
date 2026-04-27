@@ -21,7 +21,7 @@ const DEFAULT_DATA = {
     others: []
 };
 
-const BASE_URL = window.location.origin;
+const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
 
 let data = {
     openterra: [],
@@ -141,7 +141,7 @@ function renderTable(tabId, rows) {
             (tabId === 'stemworld' ? '<td class="td-cat">' +
                 '<select class="status-select" style="background-color:#f1f5f9;color:#475569;border-color:#e2e8f0;padding-right:32px;width:100%;" onchange="saveField(\'' + tabId + '\',' + realIdx + ',\'category\', this.value)">' +
                 '<option value="">Select Category</option>' +
-                ['Marketing', 'Sales', 'Finance', 'Software', 'Hardware', 'Office Infrastructure'].map(cat => 
+                ['Marketing', 'Sales', 'Finance', 'Software', 'Hardware', 'Office Infrastructure'].map(cat =>
                     '<option value="' + cat + '"' + (r.category === cat ? ' selected' : '') + '>' + cat + '</option>'
                 ).join('') +
                 '</select>' +
@@ -415,7 +415,7 @@ async function submitIdea() {
 
     // Capture tab before closeModal() clears currentModal
     var tab = currentModal;
-    
+
     // fileName is the original name, fileData stores the server-side unique filename
     var fileName = pendingFile ? pendingFile.name : (editIndex !== null ? (data[tab][editIndex].fileName || '') : '');
     var fileData = pendingFileData || (editIndex !== null ? (data[tab][editIndex].fileData || null) : null);
@@ -527,7 +527,7 @@ function downloadDocument(tabId, realIdx) {
 
 function deleteDocument(tabId, realIdx) {
     if (!confirm('Are you sure you want to remove this document?')) return;
-    
+
     const r = data[tabId][realIdx];
     if (r.cloudinaryId) {
         fetch(`${BASE_URL}/api/delete-file`, {
@@ -604,7 +604,7 @@ loadData();
 // Final icon init
 window.addEventListener('load', function () {
     lucide.createIcons();
-    
+
     // Display user email
     const email = localStorage.getItem('userEmail');
     if (email) {

@@ -28,11 +28,11 @@ togglePasswordBtn.addEventListener('click', () => {
     togglePasswordBtn.innerHTML = `<i data-lucide="${iconName}"></i>`;
     lucide.createIcons();
 });
- 
+
 toggleConfirmPasswordBtn.addEventListener('click', () => {
     const type = confirmPasswordInput.getAttribute('type') === 'password' ? 'text' : 'password';
     confirmPasswordInput.setAttribute('type', type);
- 
+
     const iconName = type === 'password' ? 'eye' : 'eye-off';
     toggleConfirmPasswordBtn.innerHTML = `<i data-lucide="${iconName}"></i>`;
     lucide.createIcons();
@@ -61,7 +61,7 @@ function setupResetPasswordMode(token) {
     authTitle.textContent = 'Set New Password';
     authSubtitle.textContent = 'Please enter your new password below';
     submitBtn.textContent = 'Reset Password';
-    
+
     // Hide unnecessary fields
     const emailInput = document.getElementById('email');
     emailInput.closest('.form-group').style.display = 'none';
@@ -70,11 +70,11 @@ function setupResetPasswordMode(token) {
     usernameGroup.style.display = 'none';
     forgotPasswordLink.style.display = 'none';
     toggleText.closest('.toggle-section').style.display = 'none';
-    
+
     // Show confirm password
     confirmPasswordGroup.style.display = 'block';
     confirmPasswordInput.required = true;
-    
+
     // Update submit handler context
     authForm.dataset.resetToken = token;
 }
@@ -116,7 +116,7 @@ function toggleMode() {
 function showMessage(type, msg) {
     statusText.textContent = msg;
     statusContainer.className = `status-message show status-${type}`;
-    
+
     // Update icon
     const iconName = type === 'success' ? 'check-circle' : (type === 'info' ? 'info' : 'alert-circle');
     statusIcon.innerHTML = `<i data-lucide="${iconName}"></i>`;
@@ -164,8 +164,8 @@ authForm.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     submitBtn.textContent = isLogin ? 'Signing in...' : 'Creating Account...';
 
-    const BASE_URL = window.location.origin;
-    const endpoint = isLogin ? '/api/login' : '/api/signup';
+    const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
+    const endpoint = isLogin ? '/login' : '/signup';
     const payload = isLogin ? { email, password } : { email, password, username };
 
     try {
@@ -208,7 +208,7 @@ authForm.addEventListener('submit', async (e) => {
 });
 
 async function handleResetPassword(token, password) {
-    const BASE_URL = window.location.origin;
+    const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
     try {
         const response = await fetch(`${BASE_URL}/api/reset-password`, {
             method: 'POST',
@@ -240,7 +240,7 @@ document.getElementById('forgot-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('forgot-email').value;
     const submitBtn = document.getElementById('forgot-submit-btn');
-    const BASE_URL = window.location.origin;
+    const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
