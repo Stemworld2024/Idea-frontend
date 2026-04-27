@@ -210,7 +210,7 @@ authForm.addEventListener('submit', async (e) => {
 async function handleResetPassword(token, password) {
     const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
     try {
-        const response = await fetch(`${BASE_URL}/api/reset-password`, {
+        const response = await fetch(`${BASE_URL}/reset-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ token, password })
@@ -246,7 +246,7 @@ document.getElementById('forgot-form').addEventListener('submit', async (e) => {
     submitBtn.textContent = 'Sending...';
 
     try {
-        const response = await fetch(`${BASE_URL}/api/forgot-password`, {
+        const response = await fetch(`${BASE_URL}/forgot-password`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email })

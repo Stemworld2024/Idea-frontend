@@ -33,7 +33,7 @@ const tabs = ['openterra', 'stemworld', 'others'];
 
 async function loadData() {
     try {
-        const response = await fetch(`${BASE_URL}/api/data`);
+        const response = await fetch(`${BASE_URL}/data`);
         data = await response.json();
         tabs.forEach(t => refreshTable(t));
     } catch (e) {
@@ -44,7 +44,7 @@ async function loadData() {
 
 async function saveToStorage() {
     try {
-        await fetch(`${BASE_URL}/api/data`, {
+        await fetch(`${BASE_URL}/data`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
@@ -299,7 +299,7 @@ async function handleFileChange() {
         const formData = new FormData();
         formData.append('file', pendingFile);
         try {
-            const response = await fetch(`${BASE_URL}/api/upload`, {
+            const response = await fetch(`${BASE_URL}/upload`, {
                 method: 'POST',
                 body: formData
             });
@@ -502,7 +502,7 @@ function openDocument(tabId, realIdx) {
     if (r.fileData && r.fileData.startsWith('http')) {
         window.open(r.fileData, '_blank');
     } else {
-        window.open(`${BASE_URL}/api/download/${r.fileData}`, '_blank');
+        window.open(`${BASE_URL}/download/${r.fileData}`, '_blank');
     }
 }
 
@@ -516,7 +516,7 @@ function downloadDocument(tabId, realIdx) {
     if (r.fileData && r.fileData.startsWith('http')) {
         link.href = r.fileData;
     } else {
-        link.href = `${BASE_URL}/api/download/${r.fileData}`;
+        link.href = `${BASE_URL}/download/${r.fileData}`;
     }
     link.download = r.fileName;
 
@@ -530,7 +530,7 @@ function deleteDocument(tabId, realIdx) {
 
     const r = data[tabId][realIdx];
     if (r.cloudinaryId) {
-        fetch(`${BASE_URL}/api/delete-file`, {
+        fetch(`${BASE_URL}/delete-file`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ public_id: r.cloudinaryId })
@@ -561,7 +561,7 @@ async function handleInlineFileChange(input) {
     const formData = new FormData();
     formData.append('file', file);
     try {
-        const response = await fetch(`${BASE_URL}/api/upload`, {
+        const response = await fetch(`${BASE_URL}/upload`, {
             method: 'POST',
             body: formData
         });
