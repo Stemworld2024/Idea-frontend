@@ -42,19 +42,6 @@ async function loadData() {
     }
 }
 
-async function saveToStorage() {
-    try {
-        await fetch(`${BASE_URL}/data`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
-        });
-    } catch (e) {
-        console.error('Storage failed', e);
-        showToast('⚠️', 'Failed to save data to server.');
-    }
-}
-
 // =============================================================
 // RUNTIME STATE
 // =============================================================
@@ -172,13 +159,31 @@ function renderTable(tabId, rows) {
     }, 0);
 }
 
-function deleteRow(tabId, realIdx) {
+async function deleteRow(tabId, realIdx) {
+    const record = data[tabId][realIdx];
+    if (!record || !record._id) {
+        showToast('❌', 'Cannot delete: ID missing.');
+        return;
+    }
+
     if (confirm('Are you sure you want to delete this idea?')) {
-        data[tabId].splice(realIdx, 1);
-        saveToStorage();
-        const rows = getFilteredRows(tabId);
-        renderTable(tabId, rows);
-        renderStats(tabId);
+        try {
+            const response = await fetch(`${BASE_URL}/ideas/${record._id}`, {
+                method: 'DELETE'
+            });
+            if (response.ok) {
+                data[tabId].splice(realIdx, 1);
+                const rows = getFilteredRows(tabId);
+                renderTable(tabId, rows);
+                renderStats(tabId);
+                showToast('🗑️', 'Idea deleted successfully.');
+            } else {
+                throw new Error('Delete failed');
+            }
+        } catch (e) {
+            console.error('Delete failed', e);
+            showToast('❌', 'Failed to delete idea from server.');
+        }
     }
 }
 
@@ -413,14 +418,12 @@ async function submitIdea() {
         return;
     }
 
-    // Capture tab before closeModal() clears currentModal
     var tab = currentModal;
-
-    // fileName is the original name, fileData stores the server-side unique filename
     var fileName = pendingFile ? pendingFile.name : (editIndex !== null ? (data[tab][editIndex].fileName || '') : '');
     var fileData = pendingFileData || (editIndex !== null ? (data[tab][editIndex].fileData || null) : null);
 
     var record = {
+        tab: tab,
         idea: idea,
         description: document.getElementById('f-desc').value.trim(),
         fileName: fileName,
@@ -432,19 +435,41 @@ async function submitIdea() {
         category: (tab === 'stemworld' ? document.getElementById('f-category').value : '')
     };
 
+    try {
+        let response;
+        if (editIndex !== null) {
+            const id = data[tab][editIndex]._id;
+            response = await fetch(`${BASE_URL}/ideas/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(record)
+            });
+        } else {
+            response = await fetch(`${BASE_URL}/ideas`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(record)
+            });
+        }
 
-    if (editIndex !== null) {
-        data[tab][editIndex] = record;
-        closeModal();
-        showToast('✏️', '"' + idea + '" updated!');
-    } else {
-        data[tab].unshift(record);
-        closeModal();
-        showToast('✅', 'Idea added successfully!');
+        const result = await response.json();
+        if (response.ok) {
+            if (editIndex !== null) {
+                data[tab][editIndex] = result;
+                showToast('✏️', '"' + idea + '" updated!');
+            } else {
+                data[tab].unshift(result);
+                showToast('✅', 'Idea added successfully!');
+            }
+            closeModal();
+            refreshTable(tab);
+        } else {
+            throw new Error(result.error || 'Server error');
+        }
+    } catch (e) {
+        console.error('Submit failed', e);
+        showToast('❌', 'Failed to save idea to server.');
     }
-
-    await saveToStorage();
-    refreshTable(tab);
 }
 
 // =============================================================
@@ -470,28 +495,51 @@ function exportExcel(tabId) {
     showToast('📥', 'Exported ' + rows.length + ' row' + (rows.length !== 1 ? 's' : '') + ' to Excel.');
 }
 
-function updateStatus(tabId, realIdx, newStatus) {
+async function updateStatus(tabId, realIdx, newStatus) {
     if (!data[tabId] || !data[tabId][realIdx]) return;
-    data[tabId][realIdx].status = newStatus;
-    saveToStorage();
-    showToast('🔄', 'Status updated to "' + newStatus + '"');
-    refreshTable(tabId);
+    const record = data[tabId][realIdx];
+    if (!record._id) return;
+
+    try {
+        const response = await fetch(`${BASE_URL}/ideas/${record._id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: newStatus })
+        });
+        if (response.ok) {
+            data[tabId][realIdx].status = newStatus;
+            showToast('🔄', 'Status updated to "' + newStatus + '"');
+            refreshTable(tabId);
+        }
+    } catch (e) {
+        console.error('Status update failed', e);
+        showToast('❌', 'Failed to update status.');
+    }
 }
 
-function saveField(tabId, realIdx, field, newValue) {
+async function saveField(tabId, realIdx, field, newValue) {
     if (!data[tabId] || !data[tabId][realIdx]) return;
+    const record = data[tabId][realIdx];
+    if (!record._id) return;
+
     // Only update if changed
-    if (data[tabId][realIdx][field] === newValue) return;
+    if (record[field] === newValue) return;
 
-    data[tabId][realIdx][field] = newValue;
-    saveToStorage();
-
-    // If it's a critical field like 'idea', we might want to refresh the stats or table, 
-    // but for smooth inline editing, we just show a toast.
-    showToast('✅', 'Updated ' + field);
-
-    // If the field affects stats (none do immediately except status, handle separately)
-    if (field === 'status') renderStats(tabId);
+    try {
+        const response = await fetch(`${BASE_URL}/ideas/${record._id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ [field]: newValue })
+        });
+        if (response.ok) {
+            data[tabId][realIdx][field] = newValue;
+            showToast('✅', 'Updated ' + field);
+            if (field === 'status') renderStats(tabId);
+        }
+    } catch (e) {
+        console.error('Field update failed', e);
+        showToast('❌', 'Failed to update ' + field);
+    }
 }
 
 function openDocument(tabId, realIdx) {
@@ -525,10 +573,12 @@ function downloadDocument(tabId, realIdx) {
     document.body.removeChild(link);
 }
 
-function deleteDocument(tabId, realIdx) {
+async function deleteDocument(tabId, realIdx) {
     if (!confirm('Are you sure you want to remove this document?')) return;
 
     const r = data[tabId][realIdx];
+    if (!r._id) return;
+
     if (r.cloudinaryId) {
         fetch(`${BASE_URL}/delete-file`, {
             method: 'POST',
@@ -537,12 +587,23 @@ function deleteDocument(tabId, realIdx) {
         }).catch(err => console.error('Failed to delete from Cloudinary', err));
     }
 
-    data[tabId][realIdx].fileName = null;
-    data[tabId][realIdx].fileData = null;
-    data[tabId][realIdx].cloudinaryId = null;
-    saveToStorage();
-    refreshTable(tabId);
-    showToast('🗑️', 'Document removed');
+    try {
+        const response = await fetch(`${BASE_URL}/ideas/${r._id}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName: null, fileData: null, cloudinaryId: null })
+        });
+        if (response.ok) {
+            data[tabId][realIdx].fileName = null;
+            data[tabId][realIdx].fileData = null;
+            data[tabId][realIdx].cloudinaryId = null;
+            refreshTable(tabId);
+            showToast('🗑️', 'Document removed');
+        }
+    } catch (e) {
+        console.error('Document delete failed', e);
+        showToast('❌', 'Failed to remove document.');
+    }
 }
 
 
@@ -556,6 +617,8 @@ async function handleInlineFileChange(input) {
     if (!inlineUploadContext || !input.files[0]) return;
     var file = input.files[0];
     var { tabId, realIdx } = inlineUploadContext;
+    const r = data[tabId][realIdx];
+    if (!r._id) return;
 
     showToast('⏳', 'Uploading file...');
     const formData = new FormData();
@@ -567,12 +630,23 @@ async function handleInlineFileChange(input) {
         });
         const result = await response.json();
         if (result.success) {
-            data[tabId][realIdx].fileName = file.name;
-            data[tabId][realIdx].fileData = result.url; // Cloudinary URL
-            data[tabId][realIdx].cloudinaryId = result.public_id; // Cloudinary ID
-            await saveToStorage();
-            refreshTable(tabId);
-            showToast('📁', 'Document uploaded successfully.');
+            const updateResponse = await fetch(`${BASE_URL}/ideas/${r._id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    fileName: file.name,
+                    fileData: result.url,
+                    cloudinaryId: result.public_id
+                })
+            });
+
+            if (updateResponse.ok) {
+                data[tabId][realIdx].fileName = file.name;
+                data[tabId][realIdx].fileData = result.url; // Cloudinary URL
+                data[tabId][realIdx].cloudinaryId = result.public_id; // Cloudinary ID
+                refreshTable(tabId);
+                showToast('📁', 'Document uploaded successfully.');
+            }
         }
 
     } catch (e) {
