@@ -21,7 +21,7 @@ const DEFAULT_DATA = {
     others: []
 };
 
-const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
+const BASE_URL = 'http://127.0.0.1:3000';
 
 let data = {
     openterra: [],
@@ -33,11 +33,19 @@ const tabs = ['openterra', 'stemworld', 'others'];
 
 async function loadData() {
     try {
+        console.log('Fetching data from:', `${BASE_URL}/data`);
         const response = await fetch(`${BASE_URL}/data`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         data = await response.json();
-        tabs.forEach(t => refreshTable(t));
+        console.log('Data loaded successfully:', data);
+        tabs.forEach(t => {
+            console.log('Rendering tab:', t);
+            refreshTable(t);
+        });
     } catch (e) {
-        console.error('Failed to load data', e);
+        console.error('Data loading failed:', e);
         showToast('❌', 'Failed to load data from server.');
     }
 }
@@ -66,7 +74,8 @@ const AVATAR_COLORS = [
     ['#facc15', '#2a1a00'], ['#a78bfa', '#1a0d2e'], ['#fb923c', '#2a0e00'],
 ];
 function avatarColor(name) {
-    return AVATAR_COLORS[(name.charCodeAt(0) || 65) % AVATAR_COLORS.length];
+    const n = name || '??';
+    return AVATAR_COLORS[(n.charCodeAt(0) || 65) % AVATAR_COLORS.length];
 }
 function statusClass(s) {
     if (s === 'Prototype Dev') return 'finished';
@@ -101,7 +110,7 @@ function renderTable(tabId, rows) {
 
     tbody.innerHTML = rows.map(function (r) {
         const realIdx = data[tabId].indexOf(r);
-        const initials = r.owner.split(' ').map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
+        const initials = (r.owner || '??').split(' ').filter(w => w).map(function (w) { return w[0]; }).join('').slice(0, 2).toUpperCase();
         const ac = avatarColor(r.owner);
         const sc = statusClass(r.status);
 
@@ -121,7 +130,7 @@ function renderTable(tabId, rows) {
                 '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
                 '</button>' +
                 '</div>'
-                : '<button class="btn-inline-upload" onclick="triggerInlineUpload(\'' + tabId + '\',' + realIdx + ')">' +
+                : '<button type="button" class="btn-inline-upload" onclick="triggerInlineUpload(\'' + tabId + '\',' + realIdx + ')">' +
                 '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
                 'Upload' +
                 '</button>') + '</td>' +
@@ -302,6 +311,7 @@ async function handleFileChange() {
     if (pendingFile) {
         showToast('⏳', 'Uploading file...');
         const formData = new FormData();
+        formData.append('tab', currentModal || 'others');
         formData.append('file', pendingFile);
         try {
             const response = await fetch(`${BASE_URL}/upload`, {
@@ -560,14 +570,19 @@ function downloadDocument(tabId, realIdx) {
     if (!r || !r.fileData) return;
 
     showToast('📥', 'Downloading ' + r.fileName + '...');
-    const link = document.createElement('a');
-    if (r.fileData && r.fileData.startsWith('http')) {
-        link.href = r.fileData;
-    } else {
-        link.href = `${BASE_URL}/download/${r.fileData}`;
+    
+    let url = r.fileData;
+    if (!url.startsWith('http')) {
+        url = `${BASE_URL}/download/${url}`;
+    } else if (url.includes('cloudinary.com')) {
+        // Force download for Cloudinary by adding fl_attachment
+        url = url.replace('/upload/', '/upload/fl_attachment/');
     }
-    link.download = r.fileName;
 
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = r.fileName || 'download';
+    link.target = '_blank';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -622,6 +637,7 @@ async function handleInlineFileChange(input) {
 
     showToast('⏳', 'Uploading file...');
     const formData = new FormData();
+    formData.append('tab', tabId);
     formData.append('file', file);
     try {
         const response = await fetch(`${BASE_URL}/upload`, {

@@ -164,7 +164,7 @@ authForm.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     submitBtn.textContent = isLogin ? 'Signing in...' : 'Creating Account...';
 
-    const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
+    const BASE_URL = 'http://127.0.0.1:3000';
     const endpoint = isLogin ? '/login' : '/signup';
     const payload = isLogin ? { email, password } : { email, password, username };
 
@@ -208,7 +208,7 @@ authForm.addEventListener('submit', async (e) => {
 });
 
 async function handleResetPassword(token, password) {
-    const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
+    const BASE_URL = 'http://127.0.0.1:3000';
     try {
         const response = await fetch(`${BASE_URL}/reset-password`, {
             method: 'POST',
@@ -240,7 +240,7 @@ document.getElementById('forgot-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('forgot-email').value;
     const submitBtn = document.getElementById('forgot-submit-btn');
-    const BASE_URL = 'https://dashboard-backend-chi-livid.vercel.app';
+    const BASE_URL = 'http://127.0.0.1:3000';
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';
