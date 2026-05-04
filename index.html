@@ -10,7 +10,9 @@
         rel="stylesheet" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/25/25231.png" />
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         // Session check - must be at the top
         if (!localStorage.getItem('authToken')) {
@@ -261,7 +263,8 @@
                 <!-- ✅ FIX 3: Document is now a file upload, not a URL text field -->
                 <div class="form-group full">
                     <label>Document (Upload File)</label>
-                    <div class="file-upload-wrap" onclick="event.stopPropagation(); document.getElementById('f-doc-file').click()">
+                    <div class="file-upload-wrap"
+                        onclick="event.stopPropagation(); document.getElementById('fileInput').click()">
                         <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
                             viewBox="0 0 24 24" style="flex-shrink:0;opacity:0.5">
                             <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -273,8 +276,7 @@
                             <div class="file-upload-hint">PDF, Word, Excel, PPT, images…</div>
                         </div>
                         <button type="button" class="file-upload-btn">Browse</button>
-                        <input type="file" id="f-doc-file"
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg"
+                        <input type="file" id="fileInput"
                             onchange="handleFileChange()" />
                     </div>
                 </div>
@@ -307,7 +309,8 @@
             </div>
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancel</button>
-                <button type="button" class="btn btn-primary" id="modal-submit-btn" onclick="submitIdea()">Add Idea</button>
+                <button type="button" class="btn btn-primary" id="modal-submit-btn" onclick="submitIdea()">Add
+                    Idea</button>
             </div>
         </div>
     </div>
@@ -319,8 +322,7 @@
     </div>
 
     <!-- Hidden Generic File Input for Inline Uploads -->
-    <input type="file" id="inline-file-input" style="display:none" onchange="handleInlineFileChange(this)"
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.png,.jpg,.jpeg" />
+    <input type="file" id="inline-file-input" style="display:none" onchange="handleInlineFileChange(this)" />
 
     <script src="script.js" defer></script>
 </body>

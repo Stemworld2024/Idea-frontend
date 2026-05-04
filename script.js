@@ -29,24 +29,115 @@ let data = {
     others: []
 };
 
+// Supabase Initialization
+const supabaseUrl = 'https://jxfqoibgnmdzabkhjkts.supabase.co';
+const supabaseKey = 'sb_publishable_Yxfx8Twhw4Fdwwn0BCku5A_6h0_d5ST';
+let supabaseClient = null;
+
+try {
+    if (window.supabase) {
+        // The CDN provides 'window.supabase'
+        supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+    } else {
+        console.warn("Supabase script not found. Uploads will be disabled.");
+    }
+} catch (err) {
+    console.error("Failed to initialize Supabase:", err);
+}
+
+async function uploadFile(file) {
+    if (!supabaseClient) {
+        console.error("Supabase client not initialized");
+        throw new Error("Supabase client not initialized. Check your URL and Key.");
+    }
+    
+    // Sanitize filename: remove special characters but keep extension
+    const cleanName = file.name.replace(/[^a-zA-Z0-9.]/g, '_');
+    const fileName = `${Date.now()}_${cleanName}`;
+    
+    console.log('--- Starting Supabase Upload ---');
+    console.log('File:', fileName, 'Type:', file.type);
+
+    const { data, error } = await supabaseClient.storage
+        .from('documents')
+        .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: true,
+            contentType: file.type // Explicitly set content type
+        });
+
+    if (error) {
+        console.error("Supabase Upload Error:", error);
+        throw error; // Throw so the caller can catch and show the message
+    }
+
+    console.log('Upload Success:', data);
+
+    const { data: { publicUrl } } = supabaseClient.storage
+        .from('documents')
+        .getPublicUrl(fileName);
+
+    return publicUrl;
+}
+
+function viewFile(url) {
+    window.open(url, '_blank');
+}
+
+async function downloadFile(url, fileName) {
+    try {
+        showToast('📥', 'Preparing download...');
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const blob = await response.blob();
+        const blobUrl = window.URL.createObjectURL(blob);
+        
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = fileName; // Use the clean original filename
+        document.body.appendChild(a);
+        a.click();
+        
+        window.URL.revokeObjectURL(blobUrl);
+        document.body.removeChild(a);
+        showToast('✅', 'Download started.');
+    } catch (err) {
+        console.error('Download failed', err);
+        showToast('❌', 'Download failed. Opening in new tab...');
+        window.open(url, '_blank');
+    }
+}
+
+
 const tabs = ['openterra', 'stemworld', 'others'];
 
 async function loadData() {
     try {
-        console.log('Fetching data from:', `${BASE_URL}/data`);
+        console.log('--- Attempting to load data ---');
+        console.log('Target URL:', `${BASE_URL}/data`);
+        
         const response = await fetch(`${BASE_URL}/data`);
+        console.log('Server response status:', response.status);
+        
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error(`Server returned error: ${response.status}`);
         }
-        data = await response.json();
-        console.log('Data loaded successfully:', data);
+        
+        const result = await response.json();
+        console.log('Data received from server:', result);
+        
+        data = result;
+        
         tabs.forEach(t => {
-            console.log('Rendering tab:', t);
+            console.log('Refreshing tab:', t);
             refreshTable(t);
         });
+        
+        showToast('✅', 'Dashboard updated from server.');
     } catch (e) {
         console.error('Data loading failed:', e);
-        showToast('❌', 'Failed to load data from server.');
+        showToast('❌', 'Connection failed: ' + e.message);
     }
 }
 
@@ -56,8 +147,7 @@ async function loadData() {
 let currentModal = null;  // which tab ("openterra" | "stemworld")
 let editIndex = null;  // data[tab] index when editing; null when adding
 let pendingFile = null;  // File object from <input type="file">
-let pendingFileData = null; // Cloudinary URL
-let pendingCloudinaryId = null; // Cloudinary Public ID
+let pendingFileData = null; // Supabase URL
 
 
 const sortState = {
@@ -118,16 +208,16 @@ function renderTable(tabId, rows) {
             '<td class="td-idea"><textarea class="inline-input" oninput="autoExpand(this)" onblur="saveField(\'' + tabId + '\',' + realIdx + ',\'idea\', this.value)">' + esc(r.idea) + '</textarea></td>' +
             '<td class="td-desc"><textarea class="inline-input" oninput="autoExpand(this)" onblur="saveField(\'' + tabId + '\',' + realIdx + ',\'description\', this.value)">' + esc(r.description) + '</textarea></td>' +
             '<td class="td-doc">' + (r.fileName
-                ? '<div style="display:flex;align-items:center;">' +
-                '<div class="file-chip-container">' +
-                '<div class="file-chip" onclick="openDocument(\'' + tabId + '\',' + realIdx + ')" title="Open ' + esc(r.fileName) + '">' +
-                '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
+                ? '<div style="display:flex;gap:12px;align-items:center;">' +
+                '<div class="file-wrapper">' +
+                '<button class="btn-file-delete" onclick="deleteDocument(\'' + tabId + '\',' + realIdx + ')" title="Permanently Delete File">×</button>' +
+                '<div class="file-link" onclick="viewFile(\'' + r.fileData + '\')" title="Open ' + esc(r.fileName) + '">' +
+                '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right:4px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>' +
                 '<span>' + esc(r.fileName) + '</span>' +
                 '</div>' +
-                '<button class="btn-cancel-chip" onclick="deleteDocument(\'' + tabId + '\',' + realIdx + ')" title="Remove Document">×</button>' +
                 '</div>' +
-                '<button class="btn-doc-dl" onclick="downloadDocument(\'' + tabId + '\',' + realIdx + ')" title="Download">' +
-                '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
+                '<button onclick="downloadFile(\'' + r.fileData + '\', \'' + esc(r.fileName) + '\')" class="btn-icon-dl" title="Download Document">' +
+                '<svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>' +
                 '</button>' +
                 '</div>'
                 : '<button type="button" class="btn-inline-upload" onclick="triggerInlineUpload(\'' + tabId + '\',' + realIdx + ')">' +
@@ -160,6 +250,7 @@ function renderTable(tabId, rows) {
     }).join('');
 
     countEl.textContent = rows.length + ' idea' + (rows.length !== 1 ? 's' : '');
+    lucide.createIcons();
 
     // Auto-expand all textareas after render
     setTimeout(() => {
@@ -303,31 +394,25 @@ function sortTable(tabId, col) {
 // FILE UPLOAD
 // =============================================================
 async function handleFileChange() {
-    var input = document.getElementById('f-doc-file');
+    var input = document.getElementById('fileInput');
     pendingFile = input.files[0] || null;
     document.getElementById('file-name-display').textContent =
         pendingFile ? pendingFile.name : 'No file chosen';
 
     if (pendingFile) {
         showToast('⏳', 'Uploading file...');
-        const formData = new FormData();
-        formData.append('tab', currentModal || 'others');
-        formData.append('file', pendingFile);
         try {
-            const response = await fetch(`${BASE_URL}/upload`, {
-                method: 'POST',
-                body: formData
-            });
-            const result = await response.json();
-            if (result.success) {
-                pendingFileData = result.url; // Store the Cloudinary URL
-                pendingCloudinaryId = result.public_id; // Store the Cloudinary ID
-                showToast('✅', 'File uploaded successfully.');
+            const fileUrl = await uploadFile(pendingFile);
+            if (fileUrl) {
+                pendingFileData = fileUrl;
+                showToast('✅', 'File uploaded to Supabase.');
+                console.log("Uploaded file URL:", fileUrl);
+            } else {
+                throw new Error("Upload failed");
             }
-
         } catch (e) {
             console.error('Upload failed', e);
-            showToast('❌', 'File upload failed.');
+            showToast('❌', 'Upload failed: ' + (e.message || 'Unknown error'));
         }
     }
 }
@@ -351,10 +436,9 @@ function openAddModal(tabId) {
     document.getElementById('f-status').value = 'Prototype Dev';
     document.getElementById('f-comment').value = '';
     document.getElementById('f-category').value = '';
-    document.getElementById('f-doc-file').value = '';
+    document.getElementById('fileInput').value = '';
     document.getElementById('file-name-display').textContent = 'No file chosen';
     pendingFileData = null;
-    pendingCloudinaryId = null;
 
 
     // Toggle Category visibility
@@ -385,11 +469,10 @@ function openEditModal(tabId, realIdx) {
     document.getElementById('f-status').value = r.status || 'Prototype Dev';
     document.getElementById('f-comment').value = r.comment || '';
     document.getElementById('f-category').value = r.category || '';
-    document.getElementById('f-doc-file').value = '';
+    document.getElementById('fileInput').value = '';
     document.getElementById('file-name-display').textContent =
         r.fileName ? r.fileName + ' (replace by uploading new file)' : 'No file chosen';
     pendingFileData = r.fileData || null;
-    pendingCloudinaryId = r.cloudinaryId || null;
 
 
     // Toggle Category visibility
@@ -407,7 +490,6 @@ function closeModal() {
     editIndex = null;
     pendingFile = null;
     pendingFileData = null;
-    pendingCloudinaryId = null;
 }
 
 document.getElementById('modal-overlay').addEventListener('click', function (e) {
@@ -438,7 +520,6 @@ async function submitIdea() {
         description: document.getElementById('f-desc').value.trim(),
         fileName: fileName,
         fileData: fileData,
-        cloudinaryId: pendingCloudinaryId || (editIndex !== null ? (data[tab][editIndex].cloudinaryId || null) : null),
         owner: owner,
         status: document.getElementById('f-status').value,
         comment: document.getElementById('f-comment').value.trim(),
@@ -552,72 +633,46 @@ async function saveField(tabId, realIdx, field, newValue) {
     }
 }
 
-function openDocument(tabId, realIdx) {
-    var r = data[tabId][realIdx];
-    if (!r || !r.fileData) return;
 
-    showToast('📄', 'Opening ' + r.fileName + '...');
-    if (r.fileData && r.fileData.startsWith('http')) {
-        window.open(r.fileData, '_blank');
-    } else {
-        window.open(`${BASE_URL}/download/${r.fileData}`, '_blank');
-    }
-}
-
-
-function downloadDocument(tabId, realIdx) {
-    var r = data[tabId][realIdx];
-    if (!r || !r.fileData) return;
-
-    showToast('📥', 'Downloading ' + r.fileName + '...');
-    
-    let url = r.fileData;
-    if (!url.startsWith('http')) {
-        url = `${BASE_URL}/download/${url}`;
-    } else if (url.includes('cloudinary.com')) {
-        // Force download for Cloudinary by adding fl_attachment
-        url = url.replace('/upload/', '/upload/fl_attachment/');
-    }
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = r.fileName || 'download';
-    link.target = '_blank';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
 
 async function deleteDocument(tabId, realIdx) {
-    if (!confirm('Are you sure you want to remove this document?')) return;
+    if (!confirm('Are you sure you want to permanently delete this document from storage?')) return;
 
     const r = data[tabId][realIdx];
-    if (!r._id) return;
-
-    if (r.cloudinaryId) {
-        fetch(`${BASE_URL}/delete-file`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ public_id: r.cloudinaryId })
-        }).catch(err => console.error('Failed to delete from Cloudinary', err));
-    }
+    if (!r._id || !r.fileData) return;
 
     try {
+        showToast('⏳', 'Deleting from Supabase...');
+        
+        // 1. Delete from Supabase Storage
+        if (supabaseClient && r.fileData.includes('supabase.co')) {
+            const filePath = r.fileData.split('/').pop(); // Extract filename from URL
+            const { error: storageError } = await supabaseClient.storage
+                .from('documents')
+                .remove([filePath]);
+            
+            if (storageError) {
+                console.warn('Supabase storage deletion error:', storageError);
+                // We continue anyway to clean up the DB record, but log the warning
+            }
+        }
+
+        // 2. Update MongoDB record
         const response = await fetch(`${BASE_URL}/ideas/${r._id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileName: null, fileData: null, cloudinaryId: null })
+            body: JSON.stringify({ fileName: null, fileData: null })
         });
+
         if (response.ok) {
             data[tabId][realIdx].fileName = null;
             data[tabId][realIdx].fileData = null;
-            data[tabId][realIdx].cloudinaryId = null;
             refreshTable(tabId);
-            showToast('🗑️', 'Document removed');
+            showToast('🗑️', 'Document permanently deleted.');
         }
     } catch (e) {
         console.error('Document delete failed', e);
-        showToast('❌', 'Failed to remove document.');
+        showToast('❌', 'Failed to delete document.');
     }
 }
 
@@ -635,31 +690,21 @@ async function handleInlineFileChange(input) {
     const r = data[tabId][realIdx];
     if (!r._id) return;
 
-    showToast('⏳', 'Uploading file...');
-    const formData = new FormData();
-    formData.append('tab', tabId);
-    formData.append('file', file);
     try {
-        const response = await fetch(`${BASE_URL}/upload`, {
-            method: 'POST',
-            body: formData
-        });
-        const result = await response.json();
-        if (result.success) {
+        const fileUrl = await uploadFile(file);
+        if (fileUrl) {
             const updateResponse = await fetch(`${BASE_URL}/ideas/${r._id}`, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     fileName: file.name,
-                    fileData: result.url,
-                    cloudinaryId: result.public_id
+                    fileData: fileUrl
                 })
             });
 
             if (updateResponse.ok) {
                 data[tabId][realIdx].fileName = file.name;
-                data[tabId][realIdx].fileData = result.url; // Cloudinary URL
-                data[tabId][realIdx].cloudinaryId = result.public_id; // Cloudinary ID
+                data[tabId][realIdx].fileData = fileUrl;
                 refreshTable(tabId);
                 showToast('📁', 'Document uploaded successfully.');
             }
@@ -667,7 +712,7 @@ async function handleInlineFileChange(input) {
 
     } catch (e) {
         console.error('Upload failed', e);
-        showToast('❌', 'File upload failed.');
+        showToast('❌', 'Upload failed: ' + (e.message || 'Unknown error'));
     }
     input.value = ''; // Reset input
 }

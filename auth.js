@@ -47,6 +47,7 @@ if (localStorage.getItem('authToken')) {
 window.addEventListener('load', () => {
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('verified')) {
+        if (!isLogin) toggleMode(); // Ensure we are in login mode
         showMessage('success', 'Email verified! You can now log in.');
     } else if (urlParams.has('error')) {
         showMessage('error', urlParams.get('error'));
