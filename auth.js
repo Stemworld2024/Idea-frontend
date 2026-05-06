@@ -165,7 +165,7 @@ authForm.addEventListener('submit', async (e) => {
     submitBtn.disabled = true;
     submitBtn.textContent = isLogin ? 'Signing in...' : 'Creating Account...';
 
-    const BASE_URL = 'http://127.0.0.1:3000';
+    const BASE_URL = 'https://idea-backend-jwst.onrender.com';
     const endpoint = isLogin ? '/login' : '/signup';
     const payload = isLogin ? { email, password } : { email, password, username };
 
@@ -209,7 +209,7 @@ authForm.addEventListener('submit', async (e) => {
 });
 
 async function handleResetPassword(token, password) {
-    const BASE_URL = 'http://127.0.0.1:3000';
+    const BASE_URL = 'https://idea-backend-jwst.onrender.com';
     try {
         const response = await fetch(`${BASE_URL}/reset-password`, {
             method: 'POST',
@@ -241,7 +241,7 @@ document.getElementById('forgot-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('forgot-email').value;
     const submitBtn = document.getElementById('forgot-submit-btn');
-    const BASE_URL = 'http://127.0.0.1:3000';
+    const BASE_URL = 'https://idea-backend-jwst.onrender.com';
 
     submitBtn.disabled = true;
     submitBtn.textContent = 'Sending...';

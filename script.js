@@ -21,7 +21,7 @@ const DEFAULT_DATA = {
     others: []
 };
 
-const BASE_URL = 'http://127.0.0.1:3000';
+const BASE_URL = 'https://idea-backend-jwst.onrender.com';
 
 let data = {
     openterra: [],
