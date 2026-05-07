@@ -167,10 +167,9 @@
                                 <th onclick="sortTable('stemworld',1)" data-col="1">Description <span
                                         class="sort-icon">↕</span></th>
                                 <th>Document</th>
-                                <th>Category</th>
-
                                 <th onclick="sortTable('stemworld',3)" data-col="3">Owner <span
                                         class="sort-icon">↕</span></th>
+                                <th>Category</th>
                                 <th onclick="sortTable('stemworld',4)" data-col="4">Status <span
                                         class="sort-icon">↕</span></th>
                                 <th>Comments</th>
@@ -251,6 +250,18 @@
                     <label>Idea Name *</label>
                     <input class="form-input" id="f-idea" type="text" placeholder="e.g. Smart Grid Integration" />
                 </div>
+                <div class="form-group" id="category-group" style="display:none;">
+                    <label>Category</label>
+                    <select class="form-select" id="f-category">
+                        <option value="">Select Category</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Sales">Sales</option>
+                        <option value="Finance">Finance</option>
+                        <option value="Software">Software</option>
+                        <option value="Hardware">Hardware</option>
+                        <option value="Office Infrastructure">Office Infrastructure</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Owner *</label>
                     <input class="form-input" id="f-owner" type="text" placeholder="e.g. Alex Kumar" />
@@ -281,18 +292,6 @@
                     </div>
                 </div>
 
-                <div class="form-group full" id="category-group" style="display:none;">
-                    <label>Category</label>
-                    <select class="form-select" id="f-category">
-                        <option value="">Select Category</option>
-                        <option value="Marketing">Marketing</option>
-                        <option value="Sales">Sales</option>
-                        <option value="Finance">Finance</option>
-                        <option value="Software">Software</option>
-                        <option value="Hardware">Hardware</option>
-                        <option value="Office Infrastructure">Office Infrastructure</option>
-                    </select>
-                </div>
                 <!-- ✅ FIX 1 (modal): Status dropdown uses only Finished / Pending / In Progress -->
                 <div class="form-group full">
                     <label>Status</label>

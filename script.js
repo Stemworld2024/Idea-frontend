@@ -224,6 +224,7 @@ function renderTable(tabId, rows) {
                 '<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>' +
                 'Upload' +
                 '</button>') + '</td>' +
+            '<td class="td-owner-cell"><div class="td-owner"><div class="avatar" style="background:' + ac[0] + ';color:' + ac[1] + ';cursor:pointer;" onclick="openEditModal(\'' + tabId + '\',' + realIdx + ')" title="Full Detail View">' + initials + '</div><textarea class="inline-input" rows="1" oninput="autoExpand(this)" onblur="saveField(\'' + tabId + '\',' + realIdx + ',\'owner\', this.value)">' + esc(r.owner) + '</textarea></div></td>' +
             (tabId === 'stemworld' ? '<td class="td-cat">' +
                 '<select class="status-select" style="background-color:#f1f5f9;color:#475569;border-color:#e2e8f0;padding-right:32px;width:100%;" onchange="saveField(\'' + tabId + '\',' + realIdx + ',\'category\', this.value)">' +
                 '<option value="">Select Category</option>' +
@@ -232,7 +233,6 @@ function renderTable(tabId, rows) {
                 ).join('') +
                 '</select>' +
                 '</td>' : '') +
-            '<td class="td-owner-cell"><div class="td-owner"><div class="avatar" style="background:' + ac[0] + ';color:' + ac[1] + ';cursor:pointer;" onclick="openEditModal(\'' + tabId + '\',' + realIdx + ')" title="Full Detail View">' + initials + '</div><textarea class="inline-input" rows="1" oninput="autoExpand(this)" onblur="saveField(\'' + tabId + '\',' + realIdx + ',\'owner\', this.value)">' + esc(r.owner) + '</textarea></div></td>' +
             '<td class="td-status-cell">' +
             '<select class="status-select ' + sc + '" onchange="updateStatus(\'' + tabId + '\',' + realIdx + ', this.value)">' +
             '<option value="">Select Status</option>' +
