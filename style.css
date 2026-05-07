@@ -691,8 +691,7 @@ td.td-idea {
 td.td-desc {
     color: var(--text-muted);
     font-size: 16px;
-    min-width: 600px;
-    /* Decreased slightly from 700px */
+    min-width: 400px;
 }
 
 /* Specific widths for meta columns */
